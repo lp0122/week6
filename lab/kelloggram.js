@@ -4,6 +4,7 @@ window.addEventListener('DOMContentLoaded', async function(event) {
   // Step 1: Accept input from the "new post" form and write 
   // post data to Firestore. For best results, use square images
   // from Unsplash, e.g. https://unsplash.com/s/photos/tacos?orientation=squarish
+        // aka copy in Firebase code with api key that links to your firebase account
   // Right-click and "copy image address"
   // - Begin by using .querySelector to select the form
   //   element, add an event listener to the 'submit' event,
@@ -13,7 +14,68 @@ window.addEventListener('DOMContentLoaded', async function(event) {
   //   db.collection('posts').add(). Along withthe username and image 
   //   URL, add a "likes" field and set it to 0; we'll use this later.
   // - Verify (in Firebase) that records are being added.
+
+    document.querySelector('form').addEventListener('submit', async function(event) {
+      event.preventDefault()
+      console.log('post submitted')
+
+      let usernameText = document.querySelector('#username').value
+      let imageurlText = document.querySelector('#image-url').value
+
+      if (usernameText.length>0 && imageurlText.length>0) {
+        let addPost = await db.collection('posts').add({
+        username: usernameText,
+        url: imageurlText,
+        likes: 0
+        })
+      }
+    })
+
+    let db = firebase.firestore()
+    let querySnapshot = await db.collection('posts').get()
+    console.log(querySnapshot.size)
+
+    let posts = querySnapshot.docs
+    console.log(posts)
+
+    for (let i=0; i<posts.length; i++) {
+      let postID = posts[i].id
+      let postData = posts[i].data()
+      let postUsername = postData.username // set this to be the variables from above in the database
+      let postImageUrl = postData.url
+      console.log(postImageUrl)
+
+      document.querySelector('.posts').insertAdjacentHTML('beforeend', `
+      <div class="post-${postID} md:mt-16 mt-8 space-y-8">
+        <div class="md:mx-0 mx-4">
+          <span class="font-bold text-xl">${postUsername}</span>
+        </div>
   
+        <div>
+          <img src="${postImageUrl}" class="w-full">
+        </div>
+   
+        <div class="text-3xl md:mx-0 mx-4">
+          <button class="like-button">❤️</button>
+          <span class="likes">0</span>
+        </div>
+      </div>
+      `)
+
+      document.querySelector(`.post-${postID} .like-button`).addEventListener('click', async function(event) {
+        event.preventDefault()
+        console.log(`like button clicked for ${postID}`)
+        let currentLikes = document.querySelector(`.post-${postID} .likes`).innerHTML
+        let newLikes = parseInt(currentLikes) + 1
+        document.querySelector(`.post-${postID} .likes`).innerHTML = newLikes
+        await db.collection('posts').doc(postID).update({
+          likes: newLikes
+        })
+      })
+    }
+  
+  // id isn't specified so will auto generate
+
   // Step 2: Read existing posts from Firestore and display them
   // when the page is loaded
   // - Read data using db.collection('posts').get()
